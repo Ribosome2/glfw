@@ -62,6 +62,9 @@ static _GLFWinitconfig _glfwInitHints =
     {
         GLFW_TRUE,  // X11 XCB Vulkan surface
     },
+    {
+        GLFW_WAYLAND_PREFER_LIBDECOR // Wayland libdecor mode
+    },
 };
 
 // The allocation function used when no custom allocator is set
@@ -169,6 +172,59 @@ size_t _glfwEncodeUTF8(char* s, uint32_t codepoint)
     }
 
     return count;
+}
+
+// Splits and translates a text/uri-list into separate file paths
+// NOTE: This function destroys the provided string
+//
+char** _glfwParseUriList(char* text, int* count)
+{
+    const char* prefix = "file://";
+    char** paths = NULL;
+    char* line;
+
+    *count = 0;
+
+    while ((line = strtok(text, "\r\n")))
+    {
+        char* path;
+
+        text = NULL;
+
+        if (line[0] == '#')
+            continue;
+
+        if (strncmp(line, prefix, strlen(prefix)) == 0)
+        {
+            line += strlen(prefix);
+            // TODO: Validate hostname
+            while (*line != '/')
+                line++;
+        }
+
+        (*count)++;
+
+        path = _glfw_calloc(strlen(line) + 1, 1);
+        paths = _glfw_realloc(paths, *count * sizeof(char*));
+        paths[*count - 1] = path;
+
+        while (*line)
+        {
+            if (line[0] == '%' && line[1] && line[2])
+            {
+                const char digits[3] = { line[1], line[2], '\0' };
+                *path = (char) strtol(digits, NULL, 16);
+                line += 2;
+            }
+            else
+                *path = *line;
+
+            path++;
+            line++;
+        }
+    }
+
+    return paths;
 }
 
 char* _glfw_strdup(const char* source)
@@ -425,6 +481,9 @@ GLFWAPI void glfwInitHint(int hint, int value)
             return;
         case GLFW_X11_XCB_VULKAN_SURFACE:
             _glfwInitHints.x11.xcbVulkanSurface = value;
+            return;
+        case GLFW_WAYLAND_LIBDECOR:
+            _glfwInitHints.wl.libdecorMode = value;
             return;
     }
 

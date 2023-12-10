@@ -28,6 +28,8 @@
 
 #include "internal.h"
 
+#if defined(_GLFW_COCOA)
+
 #include <unistd.h>
 #include <math.h>
 
@@ -81,11 +83,10 @@ static void swapIntervalNSGL(int interval)
     @autoreleasepool {
 
     _GLFWwindow* window = _glfwPlatformGetTls(&_glfw.contextSlot);
-    if (window)
-    {
-        [window->context.nsgl.object setValues:&interval
-                                  forParameter:NSOpenGLContextParameterSwapInterval];
-    }
+    assert(window != NULL);
+
+    [window->context.nsgl.object setValues:&interval
+                              forParameter:NSOpenGLContextParameterSwapInterval];
 
     } // autoreleasepool
 }
@@ -373,4 +374,6 @@ GLFWAPI id glfwGetNSGLContext(GLFWwindow* handle)
 
     return window->context.nsgl.object;
 }
+
+#endif // _GLFW_COCOA
 
